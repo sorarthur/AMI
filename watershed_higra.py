@@ -6,7 +6,7 @@ from skimage.filters import threshold_otsu
 from skimage.morphology import opening, closing, dilation, disk
 from skimage.measure import regionprops
 
-# --- 1. SETUP: Load Image and Prepare Graph ---
+# ------------------ 1. SETUP: Load Image and Prepare Graph --------------------------------
 # Load the image and convert it to grayscale for analysis.
 image_path = 'imgs/tissue.JPG'
 color_image = io.imread(image_path)
@@ -21,7 +21,7 @@ graph = hg.get_4_adjacency_graph(image_size)
 edge_weights = hg.weight_graph(graph, gray_image, hg.WeightFunction.L1)
 
 
-# --- 2. PRE-PROCESSING: Create a Clean Binary Mask ---
+# ------------------ 2. PRE-PROCESSING: Create a Clean Binary Mask --------------------------
 # Get an initial separation of tissue (foreground) from the background.
 otsu_threshold = threshold_otsu(gray_image)
 binary_mask = gray_image < otsu_threshold
@@ -36,7 +36,7 @@ opened_mask = opening(binary_mask, selem)
 closed_mask = closing(opened_mask, selem)
 
 
-# --- 3. FILTERING: Remove Small Unwanted Objects by Area ---
+# ------------------ 3. OBJECT FILTERING: Keep Only Main Tissue Components ------------------
 # Find and label each distinct object (connected component) in the cleaned mask.
 labeled_mask = measure.label(closed_mask)
 regions_props = regionprops(labeled_mask)
@@ -53,7 +53,8 @@ for prop in regions_props:
         final_foreground_mask[final_foreground_mask == prop.label] = 0
 
 
-# --- 4. MARKER CREATION: Define Start Points for Watershed ---
+# ------------------ 4. MARKER CREATION: Define Foreground and Background Markers --------------
+# We will use the cleaned foreground mask to define markers for the watershed.
 # The filtered mask gives us our "sure foreground" markers, already labeled.
 foreground_markers = final_foreground_mask
 
@@ -72,12 +73,13 @@ final_markers[background_markers] = 1
 final_markers[foreground_markers > 0] = foreground_markers[foreground_markers > 0] + 1
 
 
-# --- 5. FINAL SEGMENTATION: Run the Guided Watershed ---
+# ------------------ 5. WATERSHED SEGMENTATION: Apply Seeded Watershed ------------------------
 # Apply the seeded watershed algorithm from Higra.
 # It uses the graph, the topography (weights), and our guide map (markers).
 final_segmentation = hg.watershed.labelisation_seeded_watershed(graph, edge_weights, final_markers)
 
-# --- 6. VISUALIZATION ---
+# ------------------ 6. VISUALIZATION: Display Results ---------------------------------------
+# Display the original image and the final segmentation result.
 plt.figure(figsize=(8, 8))
 plt.imshow(final_segmentation, cmap='nipy_spectral')
 plt.title('Final Guided Watershed Segmentation (Higra)')
