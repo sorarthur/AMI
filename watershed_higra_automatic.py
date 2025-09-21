@@ -1,3 +1,4 @@
+
 # --- 1. SETUP: Import Libraries and Load Image ---
 import higra as hg
 import numpy as np
@@ -10,7 +11,7 @@ from scipy.ndimage import binary_fill_holes
 
 # Load the image and convert it to grayscale for analysis.
 try:
-    image_path = 'imgs/tissue.JPG' # Make sure to use the correct path to your image
+    image_path = 'imgs/second_tissue.JPG' # Make sure to use the correct path to your image
     color_image = io.imread(image_path)
 except FileNotFoundError:
     print(f"Error: The image file was not found at '{image_path}'")
@@ -33,7 +34,7 @@ otsu_threshold = threshold_otsu(gray_image)
 binary_mask = gray_image < otsu_threshold
 
 # Define a structuring element ("paintbrush") for morphological operations.
-selem = disk(2)
+selem = disk(1)
 
 # Clean up small, noisy particles from the background using Morphological Opening.
 opened_mask = opening(binary_mask, selem)
@@ -113,7 +114,7 @@ for label, area in zip(labels, area):
 # Display the original image, the cleaned binary mask, and the final segmentation, and the area analysis.  
 # Create a 2x2 grid for the plots
 fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-fig.suptitle('Tissue Segmentation and Area Analysis', fontsize=20)
+fig.suptitle('Tissue Segmentation and Area Analysis (Automatic Higra Method)', fontsize=20)
 ax = axes.ravel()
 
 # --- Plotting the Images ---
@@ -145,13 +146,26 @@ left_column_str = "\n".join([f"Comp {num}: {area} px" for num, area in left_colu
 right_column_str = "\n".join([f"Comp {num}: {area} px" for num, area in right_column_items])
 
 # Position the two columns of text side-by-side
-ax[3].text(0.05, 0.80, left_column_str, fontsize=12, fontfamily='monospace', verticalalignment='top')
-ax[3].text(0.55, 0.80, right_column_str, fontsize=12, fontfamily='monospace', verticalalignment='top')
+ax[3].text(0.05, 0.80, left_column_str, fontsize=10, fontfamily='monospace', verticalalignment='top')
+ax[3].text(0.55, 0.80, right_column_str, fontsize=10, fontfamily='monospace', verticalalignment='top')
 
 # Add the total area at the bottom
 total_area_str = f"\n\nTotal Tissue Area: {total_tissue_area} pixels"
-ax[3].text(0.05, 0.1, total_area_str, fontsize=14, fontweight='bold', verticalalignment='bottom')
+ax[3].text(0.30, 0.85, total_area_str, fontsize=10, fontweight='bold', verticalalignment='bottom')
 
 # Adjust layout and show the plot
 plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust for suptitle
 plt.show()
+
+# Visualize the original image and the final segmentation
+# fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+# fig.suptitle('Tissue Segmentation (Automatic Higra Method)', fontsize=20)
+# ax = axes.ravel()
+# ax[0].imshow(color_image)
+# ax[0].set_title("Original Image")
+# ax[0].axis('off')
+# ax[1].imshow(final_segmentation, cmap='nipy_spectral')
+# ax[1].set_title("Final Segmentation")
+# ax[1].axis('off')
+# plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+# plt.show()
