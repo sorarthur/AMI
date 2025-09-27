@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from skimage import io, color, measure
 from skimage.filters import threshold_otsu
-from skimage.morphology import opening, disk
+from skimage.morphology import opening, disk, remove_small_holes, remove_small_objects
 from scipy import ndimage as ndi
 
 # Load the image and convert it to grayscale for analysis.
@@ -101,8 +101,21 @@ for i in range(1, num_components + 1):
     final_segmented_image += local_segmentation
     label_offset += num_local_regions
 
+# === 5. POST-PROCESSING ===
+# Remove the noises from the final segmented image.
+print("\nPost-processing the final segmented image to remove small artifacts...")
+min_final_area = 100
+final_segmented_image_cleaned = np.zeros_like(final_segmented_image)
+for label in range(1, label_offset + 1):
+    component_mask = (final_segmented_image == label)
+    component_area = np.sum(component_mask)
+    if component_area >= min_final_area:
+        final_segmented_image_cleaned[component_mask] = label
+        final_segmented_image = final_segmented_image_cleaned
 
-# === 5. AREA ANALYSIS ===
+
+
+# === 6. AREA ANALYSIS ===
 labels, areas = np.unique(final_segmented_image, return_counts=True)
 total_tissue_area = 0
 component_areas = {}
@@ -113,7 +126,7 @@ for label, area in zip(labels, areas):
         total_tissue_area += area
 
 
-# === 6. VISUALIZATION ===
+# === 7. VISUALIZATION ===
 print("\nProcess complete. Visualizing final result.")
 # (The visualization code remains the same as the previous version)
 fig, axes = plt.subplots(2, 2, figsize=(15, 12))
