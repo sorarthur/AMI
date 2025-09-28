@@ -4,7 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from skimage import io, color, measure
 from skimage.filters import threshold_otsu
-from skimage.morphology import opening, disk, remove_small_holes, remove_small_objects
+from skimage.morphology import opening, disk
+from skimage.segmentation import watershed
+from scipy.ndimage import binary_fill_holes
 from scipy import ndimage as ndi
 
 # Load the image and convert it to grayscale for analysis.
@@ -68,6 +70,17 @@ for i in range(1, num_components + 1):
     fig, ax = plt.subplots()
     ax.imshow(component_visual, cmap='gray')
     ax.set_title(f"Select markers for Component {i} and close the window")
+    
+    try:
+        fig_manager = plt.get_current_fig_manager()
+        fig_manager.window.showMaximized()
+    except Exception:
+        try:
+            fig_manager = plt.get_current_fig_manager()
+            fig_manager.window.state('zoomed')
+        except Exception:
+            print("Warning: Could not automatically maximize ginput window.")
+    
     clicked_points = plt.ginput(n=-1, timeout=0)
     plt.close(fig)
     
@@ -103,17 +116,27 @@ for i in range(1, num_components + 1):
 
 # === 5. POST-PROCESSING ===
 # Remove the noises from the final segmented image.
-print("\nPost-processing the final segmented image to remove small artifacts...")
-min_final_area = 100
-final_segmented_image_cleaned = np.zeros_like(final_segmented_image)
-for label in range(1, label_offset + 1):
+# Create a blank canvas for the new hole-filled image.
+post_processed_image = np.copy(final_segmented_image)
+
+# Get all unique component labels, ignoring the background (label 0).
+component_labels = np.unique(final_segmented_image)
+component_labels = component_labels[component_labels != 0]
+
+print(f"Processing {len(component_labels)} components to fill internal holes...")
+
+# Loop through each component.
+for label in component_labels:
+    # Create a binary mask for the current component only.
     component_mask = (final_segmented_image == label)
-    component_area = np.sum(component_mask)
-    if component_area >= min_final_area:
-        final_segmented_image_cleaned[component_mask] = label
-        final_segmented_image = final_segmented_image_cleaned
-
-
+    
+    # Fill the holes in this specific component.
+    filled_component_mask = binary_fill_holes(component_mask)
+    
+    # Use the filled mask to "paint" the hole-filled region back into the
+    # final image with its original label.
+    post_processed_image[filled_component_mask] = label
+    
 
 # === 6. AREA ANALYSIS ===
 labels, areas = np.unique(final_segmented_image, return_counts=True)
@@ -141,7 +164,7 @@ ax[1].imshow(final_foreground_mask, cmap='gray')
 ax[1].set_title("2. Initial Major Components")
 ax[1].axis('off')
 
-ax[2].imshow(final_segmented_image, cmap='nipy_spectral')
+ax[2].imshow(post_processed_image, cmap='nipy_spectral')
 ax[2].set_title("3. Final Segmentation (Manual Markers)")
 ax[2].axis('off')
 
@@ -162,3 +185,16 @@ if component_areas:
 
 plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 plt.show()
+
+# Visualize the original image and the final segmentation
+# fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+# fig.suptitle('Tissue Segmentation (Manual Higra Method)', fontsize=20)
+# ax = axes.ravel()
+# ax[0].imshow(color_image)
+# ax[0].set_title("Original Image")
+# ax[0].axis('off')
+# ax[1].imshow(post_processed_image, cmap='nipy_spectral')
+# ax[1].set_title("Final Segmentation")
+# ax[1].axis('off')
+# plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+# plt.show()
