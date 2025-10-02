@@ -11,7 +11,7 @@ from scipy.ndimage import binary_fill_holes
 
 # Load the image and convert it to grayscale for analysis.
 try:
-    image_path = 'imgs/second_tissue.JPG' # Make sure to use the correct path to your image
+    image_path = 'imgs/tissue.JPG' # Make sure to use the correct path to your image
     color_image = io.imread(image_path)
 except FileNotFoundError:
     print(f"Error: The image file was not found at '{image_path}'")
